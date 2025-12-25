@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Murder Mystery: The Detective’s Choice</title>
+    <style>
+        :root {
+            --bg-color: #050508;
+            --panel-bg: rgba(16, 16, 24, 0.9);
+            --panel-border: rgba(255, 255, 255, 0.15);
+            --text-main: #e0e0e0;
+            --text-muted: #8a8a9b;
+            --accent-cyan: #00f3ff;
+            --accent-pink: #ff00ff;
+            --accent-green: #00ff66;
+            --accent-red: #ff3333;
+            --accent-gold: #ffd700;
+            --case-theme: #00f3ff; /* Dynamic per case */
+            --font-ui: 'Segoe UI', system-ui, sans-serif;
+            --font-mono: 'Courier New', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px 0; /* Add vertical padding for mobile */
+            background-color: var(--bg-color);
+            background-image: 
+                 
+                url("bgimg.png");
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: var(--text-main);
+            font-family: var(--font-ui);
+            overflow-x: hidden;
+            
+            /* --- Layout Fix: Top Alignment --- */
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* Horizontally center */
+            justify-content: flex-start; /* Vertically align to TOP */
+            min-height: 100vh;
+            transition: background-color 1s ease;
+        }
+
+        /* --- Layout & Utility --- */
+        #app {
+            width: 100%;
+            max-width: 650px;
+            padding: 20px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            z-index: 2;
+        }
+
+        .screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            animation: fadeIn 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .screen.active { display: flex; }
+
+        h1 {
+            font-size: 3rem;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            color: #fff;
+            text-shadow: 0 0 20px var(--case-theme), 0 0 40px var(--case-theme);
+            margin-bottom: 0.2em;
+            text-align: center;
+            transition: text-shadow 1s;
+        }
+
+        p { line-height: 1.6; color: var(--text-muted); text-align: center; max-width: 500px;}
+
+        /* --- Components --- */
+        .btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--case-theme);
+            color: var(--case-theme);
+            padding: 15px 30px;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+            font-family: var(--font-ui);
+            font-weight: 700;
+            border-radius: 50px;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 320px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:hover {
+            background: var(--case-theme);
+            color: #000;
+            box-shadow: 0 0 30px var(--case-theme);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary { border-color: var(--text-muted); color: var(--text-muted); }
+        .btn-secondary:hover { background: var(--text-muted); color: #000; box-shadow: 0 0 20px var(--text-muted); }
+
+        /* --- Level Grid --- */
+        .level-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+            gap: 10px;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .level-node {
+            aspect-ratio: 1;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: #444;
+            cursor: not-allowed;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .level-node.unlocked {
+            border-color: var(--case-theme);
+            color: var(--case-theme);
+            cursor: pointer;
+            box-shadow: inset 0 0 10px rgba(255,255,255,0.05);
+        }
+        
+        .level-node.solved {
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+            background: rgba(0, 255, 102, 0.05);
+        }
+
+        /* --- Game Board & Notebook --- */
+        .hud {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            padding: 10px 20px;
+            background: rgba(0,0,0,0.6);
+            border-radius: 30px;
+            border: 1px solid var(--panel-border);
+            margin-bottom: 15px;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .case-file {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-top: 3px solid var(--case-theme);
+            border-radius: 8px;
+            padding: 20px;
+            width: 100%;
+            margin-bottom: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            position: relative;
+            transition: border-color 1s;
+        }
+
+        .notebook-panel {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        
+        .notebook-toggle {
+            background: rgba(0,0,0,0.5);
+            border: 1px solid var(--text-muted);
+            color: var(--text-muted);
+            width: 100%;
+            padding: 10px;
+            text-align: left;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .notebook-content {
+            display: none;
+            width: 100%;
+            height: 100px;
+            background: #111;
+            border: 1px solid var(--text-muted);
+            border-top: none;
+            color: #fff;
+            font-family: var(--font-mono);
+            padding: 10px;
+            resize: none;
+            font-size: 0.9rem;
+        }
+        
+        .notebook-content.open { display: block; }
+
+        /* --- Briefing Overlay --- */
+        #briefing-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #000;
+            z-index: 2000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        #briefing-text {
+            font-family: var(--font-mono);
+            color: var(--case-theme);
+            font-size: 2rem;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            text-shadow: 0 0 10px var(--case-theme);
+        }
+
+        .scenario-text {
+            font-family: var(--font-mono);
+            color: #ccc;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            min-height: 50px;
+        }
+
+        .cursor::after {
+            content: '█';
+            animation: blink 1s step-start infinite;
+            color: var(--case-theme);
+        }
+
+        /* --- Suspect Profiles --- */
+        .suspects-list { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+
+        .suspect-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .suspect-header {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .suspect-radio { margin-right: 15px; transform: scale(1.5); accent-color: var(--case-theme); }
+
+        .suspect-name { font-weight: bold; flex-grow: 1; color: var(--text-muted); transition: color 0.3s; }
+        .suspect-card.selected .suspect-name { color: #fff; text-shadow: 0 0 10px var(--case-theme); }
+        .suspect-card.selected { border-color: var(--case-theme); background: rgba(255,255,255,0.05); }
+
+        .suspect-details {
+            display: none;
+            padding: 0 15px 15px 45px;
+            font-size: 0.85rem;
+            color: #aaa;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            margin-top: -5px;
+            animation: slideDown 0.3s ease-out;
+        }
+        .suspect-details.open { display: block; }
+        .detail-row { margin: 5px 0; display: flex; }
+        .detail-label { width: 80px; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; }
+
+        /* --- Hints --- */
+        .hints-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+        .hint-card {
+            background: linear-gradient(135deg, #1a1a24, #0e0e14);
+            border: 1px solid #333;
+            padding: 15px;
+            min-height: 80px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            border-radius: 6px;
+        }
+
+        .hint-card:hover:not(.disabled):not(.revealed) { border-color: var(--case-theme); transform: scale(1.02); }
+        .hint-card.revealed { border-color: var(--case-theme); color: var(--case-theme); background: rgba(0,0,0,0.3); }
+        .hint-card.disabled { opacity: 0.3; pointer-events: none; filter: grayscale(1); }
+        
+        .hint-hidden-text { font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 1px; color: #666; }
+
+        /* --- Animations --- */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes blink { 50% { opacity: 0; } }
+        @keyframes glitch { 
+            0% { transform: translate(0); } 20% { transform: translate(-2px, 2px); } 
+            40% { transform: translate(-2px, -2px); } 60% { transform: translate(2px, 2px); } 
+            80% { transform: translate(2px, -2px); } 100% { transform: translate(0); }
+        }
+        @keyframes briefingSequence {
+            0% { opacity: 1; background: #000; }
+            10% { background: #000; }
+            15% { background: #111; }
+            20% { background: #000; }
+            80% { opacity: 1; }
+            100% { opacity: 0; pointer-events: none; }
+        }
+        @keyframes heartbeat {
+            0% { transform: scale(1); filter: brightness(1); }
+            10% { transform: scale(1.02); filter: brightness(0.5) sepia(1) hue-rotate(-50deg) saturate(3); }
+            20% { transform: scale(1); filter: brightness(1); }
+            30% { transform: scale(1.02); filter: brightness(0.5) sepia(1) hue-rotate(-50deg) saturate(3); }
+            40% { transform: scale(1); filter: brightness(1); }
+        }
+        .heartbeat-effect { animation: heartbeat 0.8s ease-out; }
+
+        /* --- Modal --- */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 3000; opacity: 0; pointer-events: none; transition: opacity 0.5s;
+        }
+        .modal.open { opacity: 1; pointer-events: all; }
+        .modal-content {
+            background: #111; border: 1px solid var(--case-theme); padding: 30px;
+            max-width: 500px; width: 90%; text-align: center; border-radius: 10px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        }
+
+        /* --- Audio Toggle --- */
+        #audio-toggle {
+            position: fixed; top: 20px; right: 20px;
+            width: 40px; height: 40px; border-radius: 50%;
+            background: rgba(0,0,0,0.5); border: 1px solid #666; color: #666;
+            display: flex; justify-content: center; align-items: center; cursor: pointer;
+            z-index: 4000; transition: all 0.3s;
+        }
+        #audio-toggle.on { border-color: var(--accent-cyan); color: var(--accent-cyan); box-shadow: 0 0 10px var(--accent-cyan); }
+        
+        .watermark { position: fixed; bottom: 10px; width: 100%; text-align: center; font-size: 0.7rem; color: #444; pointer-events: none; }
+
+        /* Rank Badge */
+        .rank-badge { 
+            padding: 5px 12px; border: 1px solid var(--accent-gold); color: var(--accent-gold); 
+            border-radius: 15px; font-size: 0.7rem; letter-spacing: 2px; text-transform: uppercase;
+        }
+
+    </style>
+</head>
+<body>
+
+    <button id="audio-toggle" title="Toggle Sound">🔇</button>
+    <canvas id="confetti-canvas"></canvas>
+
+    <!-- Briefing Overlay -->
+    <div id="briefing-overlay">
+        <div id="briefing-text">CLASSIFIED</div>
+        <div style="font-family: var(--font-mono); font-size: 0.8rem; color: #666; margin-top: 10px;">ACCESSING DATABASE...</div>
+    </div>
+
+    <div id="app">
+        
+        <!-- Start Screen -->
+        <section id="start-screen" class="screen active">
+            <h1>Murder Mystery</h1>
+            <p style="letter-spacing: 4px; font-size: 0.8rem; text-transform: uppercase; color: var(--accent-cyan);">The Detective's Choice</p>
+            <div style="width: 100px; height: 2px; background: var(--accent-pink); margin: 20px 0;"></div>
+            
+            <div id="main-rank-display" class="rank-badge">RANK: ROOKIE</div>
+            
+            <button class="btn" onclick="game.showDifficulty()">Enter Investigation</button>
+            <button class="btn btn-secondary" onclick="game.showAchievements()">Achievements</button>
+        </section>
+
+        <!-- Difficulty -->
+        <section id="difficulty-screen" class="screen">
+            <h2>Select Intensity</h2>
+            <button class="btn" style="border-color: var(--accent-green); color: var(--accent-green)" onclick="game.selectDifficulty('Easy')">Easy (Clear Clues)</button>
+            <button class="btn" style="border-color: var(--accent-gold); color: var(--accent-gold)" onclick="game.selectDifficulty('Medium')">Medium (Standard)</button>
+            <button class="btn" style="border-color: var(--accent-red); color: var(--accent-red)" onclick="game.selectDifficulty('Hard')">Hard (Psychological)</button>
+        </section>
+
+        <!-- Achievements -->
+        <section id="achievements-screen" class="screen">
+            <h2>Career Record</h2>
+            <div id="achievements-list" style="width: 100%; display: grid; gap: 10px; margin-top: 20px;">
+                <!-- JS populated -->
+            </div>
+            <button class="btn btn-secondary" style="margin-top: 20px;" onclick="game.showScreen('start-screen')">Back</button>
+        </section>
+
+        <!-- Level Select -->
+        <section id="level-select-screen" class="screen">
+            <h2>Case Files</h2>
+            <div class="level-grid" id="level-grid"></div>
+            <button class="btn btn-secondary" style="margin-top: 30px;" onclick="game.showScreen('start-screen')">Logout</button>
+        </section>
+
+        <!-- Game Screen -->
+        <section id="game-screen" class="screen">
+            <div class="hud">
+                <span id="game-rank-hud" style="color: var(--accent-gold)">ROOKIE</span>
+                <span onclick="game.abortCase()" style="cursor: pointer; color: #666;">✖ ABORT</span>
+            </div>
+
+            <h3 id="case-title" style="color: var(--case-theme); width: 100%; text-align: left; text-transform: uppercase; margin-bottom: 10px;">Case #1</h3>
+
+            <div class="case-file">
+                <div style="text-transform: uppercase; font-size: 0.7rem; color: var(--case-theme); margin-bottom: 10px; letter-spacing: 1px;">/// INCIDENT REPORT ///</div>
+                <div id="scenario-text" class="scenario-text"></div>
+            </div>
+
+            <!-- Detective Notebook -->
+            <div class="notebook-panel">
+                <div class="notebook-toggle" onclick="game.toggleNotebook()">
+                    <span>📝 DETECTIVE NOTES</span>
+                    <span id="notebook-arrow">▼</span>
+                </div>
+                <textarea id="notebook-area" class="notebook-content" placeholder="Type your observations here... (Auto-saved)"></textarea>
+            </div>
+
+            <div class="hints-section">
+                <div class="hints-header">
+                    <span>Evidence</span>
+                    <span id="hints-counter" style="color: var(--case-theme)">0/3</span>
+                </div>
+                <div class="hints-grid" id="hints-grid"></div>
+            </div>
+
+            <div style="width: 100%; margin-bottom: 10px; text-transform: uppercase; font-size: 0.8rem; color: #666; letter-spacing: 1px;">Suspect Profiles</div>
+            <div class="suspects-list" id="suspects-list"></div>
+
+            <button class="btn" style="margin-top: 30px; background: var(--accent-green); color: #000; border: none;" onclick="game.submitAccusation()">FILE CHARGES</button>
+        </section>
+    </div>
+
+    <!-- Modals -->
+    <div id="modal-result" class="modal">
+        <div class="modal-content">
+            <h2 id="modal-heading" style="color: var(--accent-green); font-size: 2rem; margin-bottom: 10px;">CASE SOLVED</h2>
+            
+            <div id="rating-box" style="margin: 10px 0; padding: 10px; border: 1px dashed #444; color: var(--accent-gold);">
+                PERFORMANCE: <span id="performance-rating" style="font-weight: bold;">PERFECT</span>
+            </div>
+
+            <p id="modal-message" style="color: #ccc; margin-bottom: 20px; line-height: 1.5;">Great work.</p>
+            
+            <div style="text-align: left; background: #050508; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                <div style="color: var(--accent-cyan); font-size: 0.8rem; margin-bottom: 5px;">DEDUCTION LOGIC:</div>
+                <p id="modal-explanation" style="font-size: 0.9rem; color: #888; margin: 0;"></p>
+            </div>
+
+            <button class="btn" style="width: auto; padding: 10px 40px;" onclick="game.closeModal()">Next Case</button>
+        </div>
+    </div>
+
+    <div class="watermark">made with <span>❤</span> by royverse</div>
+
+    <script>
+        // --- Enhanced Data Structure ---
+        const mysteries = [
+            {
+                id: 1,
+                title: "The Midnight Espresso",
+                type: 'poison', // blue
+                scenario: "A cafe owner was found poisoned. Three cups on the table. Poison was instant.",
+                explanation: "The poison was in the sugar. The customer drinks black, supplier drinks tea. Only the owner used sugar, which the Barista filled.",
+                suspects: [
+                    { name: "Barista", job: "Staff", relation: "Employee", alibi: "Cleaning counter", trait: "Nervous" },
+                    { name: "Customer", job: "Regular", relation: "None", alibi: "Reading book", trait: "Observant" },
+                    { name: "Supplier", job: "Merchant", relation: "Business", alibi: "Unloading truck", trait: "Impatient" }
+                ],
+                hints: ["Traces of poison found in sugar.", "Customer drinks coffee black.", "Supplier only drinks herbal tea.", "Barista refilled sugar jar recently."],
+                killer: "Barista"
+            },
+            {
+                id: 2,
+                title: "The Silent Alarm",
+                type: 'violent', // red
+                scenario: "Jewelry store robbery. Manager killed. Silent alarm never triggered.",
+                explanation: "Only the Manager knew the new alarm code. The 'Thief' triggered sensors instantly. The Manager staged it but was betrayed.",
+                suspects: [
+                    { name: "Manager", job: "Store Lead", relation: "Victim (Self-stage?)", alibi: "In office", trait: "Greedy" },
+                    { name: "Night Guard", job: "Security", relation: "Employee", alibi: "Tied up", trait: "Loyal" },
+                    { name: "Masked Thief", job: "Criminal", relation: "Stranger", alibi: " fleeing", trait: "Reckless" }
+                ],
+                hints: ["Alarm code changed yesterday.", "Only Manager knew new code.", "Guard found tied up properly.", "Thief triggered entry sensors."],
+                killer: "Manager"
+            },
+            {
+                id: 3,
+                title: "High Altitude",
+                type: 'mystery', // purple
+                scenario: "CEO pushed off locked balcony. Door locked from inside.",
+                explanation: "No one could enter the balcony from inside. The Killer came from outside using a window cleaner rig.",
+                suspects: [
+                    { name: "Wife", job: "Socialite", relation: "Spouse", alibi: "In shower", trait: "Cold" },
+                    { name: "Rival", job: "CEO", relation: "Enemy", alibi: "At Gala", trait: "Arrogant" },
+                    { name: "Window Cleaner", job: "Worker", relation: "None", alibi: "On rig", trait: "Quiet" }
+                ],
+                hints: ["Balcony only accessible from room.", "Window cleaner rig nearby.", "Wife has no wet hair.", "Rival has solid witness."],
+                killer: "Window Cleaner"
+            },
+            {
+                id: 4,
+                title: "The Antique Clock",
+                type: 'mystery',
+                scenario: "Collector killed. Clock stopped at 10:00 PM exact.",
+                explanation: "The clock is battery operated, so 'winding' it is a lie. The Butler fabricated the alibi.",
+                suspects: [
+                    { name: "Nephew", job: "Student", relation: "Heir", alibi: "Gaming", trait: "In Debt" },
+                    { name: "Nurse", job: "Carer", relation: "Employee", alibi: "Left at 9", trait: "Caring" },
+                    { name: "Butler", job: "Servant", relation: "Employee", alibi: "Winding clock", trait: "Formal" }
+                ],
+                hints: ["Nurse clocked out at 9:00.", "Butler claims winding clock.", "Clock is battery operated.", "Nephew has debt."],
+                killer: "Butler"
+            },
+            {
+                id: 5,
+                title: "Frozen Tracks",
+                type: 'mystery',
+                scenario: "Body in snowy cabin. Tracks lead away, none lead to it.",
+                explanation: "The victim arrived before snow. Tracks leading 'away' were the killer walking backwards in victim's boots.",
+                suspects: [
+                    { name: "Hiker", job: "Tourist", relation: "Stranger", alibi: "Lost", trait: "Panicked" },
+                    { name: "Pilot", job: "Search", relation: "Rescuer", alibi: "Flying", trait: "Alert" },
+                    { name: "Cabin Owner", job: "Local", relation: "Landlord", alibi: "Town", trait: "Calculated" }
+                ],
+                hints: ["Snow started 2 hours ago.", "Victim arrived yesterday.", "Owner has snowshoes.", "Tracks match victim's boots walking backwards."],
+                killer: "Cabin Owner"
+            }
+        ];
+
+        // --- Audio Engine (Enhanced) ---
+        const AudioEngine = {
+            ctx: null,
+            enabled: false,
+            masterGain: null,
+            bgm: null,
+            
+            init() {
+                if (!this.ctx) {
+                    const AC = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AC();
+                    this.masterGain = this.ctx.createGain();
+                    this.masterGain.connect(this.ctx.destination);
+                }
+                if (!this.bgm) {
+                    this.bgm = new Audio('bgm.mp3');
+                    this.bgm.loop = true;
+                    this.bgm.volume = 0.; // Reduced to 40% as requested
+                }
+                if(this.ctx.state === 'suspended') this.ctx.resume();
+            },
+
+            toggle() {
+                this.enabled = !this.enabled;
+                const btn = document.getElementById('audio-toggle');
+                if (this.enabled) {
+                    this.init();
+                    btn.classList.add('on');
+                    btn.textContent = '🔊';
+                    // Play BGM
+                    this.bgm.play().catch(e => console.log("BGM play failed (user interaction needed):", e));
+                } else {
+                    btn.classList.remove('on');
+                    btn.textContent = '🔇';
+                    this.bgm.pause();
+                }
+            },
+
+            setTension(level) {
+                // Tension logic can affect SFX, but BGM is constant as requested
+            },
+
+            playSound(type) {
+                if (!this.enabled || !this.ctx) return;
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain);
+                gain.connect(this.masterGain);
+
+                // PUNCHIER SFX SETTINGS
+                if (type === 'hover') {
+                    // Fast, sharp tech chirp
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(800, t);
+                    osc.frequency.exponentialRampToValueAtTime(1200, t + 0.05);
+                    gain.gain.setValueAtTime(0.05, t);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+                    osc.start(t);
+                    osc.stop(t + 0.05);
+                } 
+                else if (type === 'click') {
+                    // Heavy, short, mechanical click
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(200, t);
+                    osc.frequency.exponentialRampToValueAtTime(50, t + 0.08); // Faster drop
+                    gain.gain.setValueAtTime(0.1, t);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08); // Faster decay
+                    osc.start(t);
+                    osc.stop(t + 0.08);
+                }
+                else if (type === 'type') {
+                    // Crisp typewriter
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(1200, t);
+                    gain.gain.setValueAtTime(0.04, t);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.03); // Very short
+                    osc.start(t);
+                    osc.stop(t + 0.03);
+                }
+                else if (type === 'heartbeat') {
+                    // Thud
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(60, t);
+                    osc.frequency.exponentialRampToValueAtTime(40, t + 0.2);
+                    gain.gain.setValueAtTime(0.5, t);
+                    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
+                    osc.start(t);
+                    osc.stop(t + 0.4);
+                }
+                else if (type === 'win') {
+                    // Sharp Major Chord Arpeggio
+                    const freqs = [523.25, 659.25, 783.99, 1046.50];
+                    freqs.forEach((f, i) => {
+                        const o = this.ctx.createOscillator();
+                        const g = this.ctx.createGain();
+                        o.type = 'triangle';
+                        o.frequency.value = f;
+                        o.connect(g);
+                        g.connect(this.masterGain);
+                        g.gain.setValueAtTime(0, t);
+                        g.gain.linearRampToValueAtTime(0.1, t + 0.05 + (i*0.04));
+                        g.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
+                        o.start(t);
+                        o.stop(t + 0.8);
+                    });
+                }
+            }
+        };
+
+        // --- Game Logic ---
+        const game = {
+            unlockedLevels: 1,
+            currentLevelId: 1,
+            selectedHints: [],
+            selectedSuspect: null,
+            difficulty: 'Easy',
+            typingInterval: null,
+            stats: { wins: 0, perfects: 0, mistakes: 0 },
+            achievements: [],
+
+            init() {
+                const saved = localStorage.getItem('royverse_detective_pro');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    this.unlockedLevels = data.levels || 1;
+                    this.stats = data.stats || { wins: 0, perfects: 0, mistakes: 0 };
+                    this.achievements = data.achievements || [];
+                }
+                
+                this.updateRankDisplay();
+                
+                // Event Listeners
+                document.getElementById('audio-toggle').addEventListener('click', (e) => { e.stopPropagation(); AudioEngine.toggle(); });
+                document.getElementById('notebook-area').addEventListener('input', (e) => this.saveNote(e.target.value));
+            },
+
+            saveState() {
+                const data = {
+                    levels: this.unlockedLevels,
+                    stats: this.stats,
+                    achievements: this.achievements
+                };
+                localStorage.setItem('royverse_detective_pro', JSON.stringify(data));
+            },
+
+            getRank() {
+                if (this.unlockedLevels >= 5) return "SHERLOCK";
+                if (this.unlockedLevels >= 3) return "INSPECTOR";
+                return "ROOKIE";
+            },
+
+            updateRankDisplay() {
+                const rank = this.getRank();
+                document.getElementById('main-rank-display').textContent = `RANK: ${rank}`;
+                document.getElementById('game-rank-hud').textContent = rank;
+            },
+
+            showScreen(screenId) {
+                document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                setTimeout(() => document.getElementById(screenId).classList.add('active'), 10);
+                if (screenId === 'level-select-screen') this.renderLevelGrid();
+            },
+
+            showDifficulty() { AudioEngine.playSound('click'); this.showScreen('difficulty-screen'); },
+            
+            selectDifficulty(level) { 
+                this.difficulty = level; 
+                AudioEngine.playSound('click'); 
+                this.showScreen('level-select-screen'); 
+            },
+
+            showAchievements() {
+                const list = document.getElementById('achievements-list');
+                list.innerHTML = '';
+                
+                const allAchievements = [
+                    { id: 'first_blood', name: "First Solve", icon: "🔍", desc: "Solve your first mystery" },
+                    { id: 'perfect_mind', name: "Mind Palace", icon: "🧠", desc: "Solve with ≤ 2 hints" },
+                    { id: 'veteran', name: "Veteran", icon: "⭐", desc: "Reach Level 5" }
+                ];
+
+                if(this.stats.wins > 0 && !this.achievements.includes('first_blood')) this.unlockAchievement('first_blood');
+                if(this.unlockedLevels >= 5 && !this.achievements.includes('veteran')) this.unlockAchievement('veteran');
+
+                allAchievements.forEach(ach => {
+                    const unlocked = this.achievements.includes(ach.id);
+                    const div = document.createElement('div');
+                    div.style.cssText = `background: ${unlocked ? 'rgba(0,255,102,0.1)' : '#111'}; border: 1px solid ${unlocked ? '#00ff66' : '#333'}; padding: 15px; display: flex; align-items: center; border-radius: 8px;`;
+                    div.innerHTML = `
+                        <div style="font-size: 1.5rem; margin-right: 15px; opacity: ${unlocked ? 1 : 0.3}">${ach.icon}</div>
+                        <div>
+                            <div style="color: ${unlocked ? '#fff' : '#666'}; font-weight: bold;">${ach.name}</div>
+                            <div style="color: #666; font-size: 0.8rem;">${ach.desc}</div>
+                        </div>
+                    `;
+                    list.appendChild(div);
+                });
+                this.showScreen('achievements-screen');
+            },
+
+            unlockAchievement(id) {
+                if(!this.achievements.includes(id)) {
+                    this.achievements.push(id);
+                    this.saveState();
+                }
+            },
+
+            renderLevelGrid() {
+                const grid = document.getElementById('level-grid');
+                grid.innerHTML = '';
+                mysteries.forEach(m => {
+                    const node = document.createElement('div');
+                    node.className = 'level-node';
+                    node.textContent = m.id;
+                    if (m.id <= this.unlockedLevels) {
+                        node.classList.add('unlocked');
+                        if (m.id < this.unlockedLevels) node.classList.add('solved');
+                        node.onclick = () => this.startLevel(m.id);
+                    }
+                    grid.appendChild(node);
+                });
+            },
+
+            async startLevel(id) {
+                AudioEngine.playSound('click');
+                this.currentLevelId = id;
+                this.selectedHints = [];
+                this.selectedSuspect = null;
+                const data = mysteries.find(m => m.id === id);
+
+                // 1. Briefing Animation
+                const overlay = document.getElementById('briefing-overlay');
+                const briefingText = document.getElementById('briefing-text');
+                
+                // Dynamic theme
+                const colors = { poison: '#00f3ff', violent: '#ff3333', mystery: '#ff00ff' };
+                const theme = colors[data.type] || '#00f3ff';
+                document.documentElement.style.setProperty('--case-theme', theme);
+                briefingText.style.color = theme;
+                briefingText.style.textShadow = `0 0 20px ${theme}`;
+
+                overlay.style.animation = 'none';
+                void overlay.offsetWidth; // trigger reflow
+                overlay.style.animation = 'briefingSequence 3s forwards';
+                
+                AudioEngine.playSound('click'); // Simulating data noise
+                
+                // Wait for animation
+                await new Promise(r => setTimeout(r, 2000));
+
+                // 2. Setup Game UI
+                document.getElementById('case-title').textContent = `CASE FILE #${id}: ${data.title}`;
+                document.getElementById('hints-counter').textContent = `0/3`;
+                
+                // Load Notes
+                const notes = localStorage.getItem(`note_case_${id}`) || "";
+                document.getElementById('notebook-area').value = notes;
+                document.querySelector('.notebook-content').classList.remove('open');
+
+                // Render Hints
+                const hintsGrid = document.getElementById('hints-grid');
+                hintsGrid.innerHTML = '';
+                data.hints.forEach((hintText, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'hint-card';
+                    card.innerHTML = `<span class="hint-hidden-text">EVIDENCE #${index+1}</span>`;
+                    card.onclick = () => this.revealHint(card, hintText, index);
+                    hintsGrid.appendChild(card);
+                });
+
+                // Render Suspect Profiles
+                const suspectsList = document.getElementById('suspects-list');
+                suspectsList.innerHTML = '';
+                data.suspects.forEach((suspect, idx) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'suspect-card';
+                    wrapper.onclick = (e) => {
+                        // Expand details
+                        document.querySelectorAll('.suspect-details').forEach(el => el.classList.remove('open'));
+                        wrapper.querySelector('.suspect-details').classList.add('open');
+                        
+                        // Select radio
+                        wrapper.querySelector('input').checked = true;
+                        this.selectedSuspect = suspect.name;
+                        
+                        // Visual selection
+                        document.querySelectorAll('.suspect-card').forEach(c => c.classList.remove('selected'));
+                        wrapper.classList.add('selected');
+                        
+                        AudioEngine.playSound('click');
+                    };
+
+                    wrapper.innerHTML = `
+                        <div class="suspect-header">
+                            <input type="radio" name="suspect" class="suspect-radio">
+                            <div class="suspect-name">${suspect.name} <span style="font-size:0.7rem; opacity:0.6; font-weight:normal">(${suspect.job})</span></div>
+                        </div>
+                        <div class="suspect-details">
+                            <div class="detail-row"><div class="detail-label">Relation:</div> ${suspect.relation}</div>
+                            <div class="detail-row"><div class="detail-label">Alibi:</div> ${suspect.alibi}</div>
+                            <div class="detail-row"><div class="detail-label">Trait:</div> ${suspect.trait}</div>
+                        </div>
+                    `;
+                    suspectsList.appendChild(wrapper);
+                });
+
+                this.showScreen('game-screen');
+                this.typewriter(data.scenario, document.getElementById('scenario-text'));
+            },
+
+            typewriter(text, element) {
+                element.innerHTML = '<span class="cursor"></span>';
+                clearInterval(this.typingInterval);
+                let i = 0;
+                this.typingInterval = setInterval(() => {
+                    element.innerHTML = text.substring(0, i) + '<span class="cursor"></span>';
+                    i++;
+                    if (i % 3 === 0) AudioEngine.playSound('type'); // Sound every 3 chars
+                    if (i > text.length) {
+                        clearInterval(this.typingInterval);
+                        element.innerHTML = text; 
+                    }
+                }, 30);
+            },
+
+            revealHint(card, text, index) {
+                if (this.selectedHints.length >= 3 || this.selectedHints.includes(index)) return;
+                
+                // Animation
+                card.innerHTML = `<span class="hint-hidden-text" style="animation: glitch 0.2s infinite">DECRYPTING...</span>`;
+                AudioEngine.playSound('type');
+
+                setTimeout(() => {
+                    this.selectedHints.push(index);
+                    card.innerHTML = `<span style="font-size:0.85rem; color:#fff; animation: fadeIn 0.5s">${text}</span>`;
+                    card.classList.add('revealed');
+                    document.getElementById('hints-counter').textContent = `${this.selectedHints.length}/3`;
+                    
+                    // Audio Tension
+                    AudioEngine.playSound('click');
+                    AudioEngine.setTension(this.selectedHints.length);
+
+                    if (this.selectedHints.length === 3) {
+                        document.querySelectorAll('.hint-card:not(.revealed)').forEach(c => c.classList.add('disabled'));
+                    }
+                }, 500);
+            },
+
+            submitAccusation() {
+                if (!this.selectedSuspect) return;
+
+                const currentCase = mysteries.find(m => m.id === this.currentLevelId);
+                const isCorrect = this.selectedSuspect === currentCase.killer;
+
+                if (isCorrect) {
+                    this.handleWin(currentCase);
+                } else {
+                    this.handleLoss();
+                }
+            },
+
+            handleWin(data) {
+                AudioEngine.playSound('win');
+                startConfetti();
+                
+                this.stats.wins++;
+                
+                // Calculate Rating
+                let rating = "DETECTIVE";
+                if(this.selectedHints.length <= 2) { rating = "PERFECT"; this.stats.perfects++; this.unlockAchievement('perfect_mind'); }
+                else if(this.selectedHints.length === 3) rating = "SOLID";
+
+                // Update Data
+                if(this.currentLevelId === this.unlockedLevels && this.unlockedLevels < mysteries.length) {
+                    this.unlockedLevels++;
+                }
+                this.saveState();
+
+                // UI
+                document.getElementById('modal-heading').textContent = "CASE CLOSED";
+                document.getElementById('modal-heading').style.color = "var(--accent-green)";
+                document.getElementById('performance-rating').textContent = rating;
+                document.getElementById('modal-message').innerHTML = `Suspect <b>${data.killer}</b> apprehended.`;
+                document.getElementById('modal-explanation').textContent = data.explanation;
+                
+                document.getElementById('modal-result').classList.add('open');
+            },
+
+            handleLoss() {
+                this.stats.mistakes++;
+                AudioEngine.playSound('heartbeat');
+                
+                // Heartbeat Visual
+                const app = document.getElementById('app');
+                app.classList.add('heartbeat-effect');
+                setTimeout(() => app.classList.remove('heartbeat-effect'), 800);
+                
+                const btn = document.querySelector('#game-screen .btn:last-of-type');
+                btn.textContent = "INCORRECT SUSPECT";
+                btn.style.background = "var(--accent-red)";
+                setTimeout(() => {
+                    btn.textContent = "FILE CHARGES";
+                    btn.style.background = "var(--accent-green)";
+                }, 1000);
+            },
+
+            closeModal() {
+                document.getElementById('modal-result').classList.remove('open');
+                stopConfetti();
+                AudioEngine.setTension(0);
+                if(this.currentLevelId < mysteries.length) {
+                    this.showScreen('level-select-screen');
+                }
+            },
+
+            abortCase() {
+                AudioEngine.setTension(0);
+                this.showScreen('level-select-screen');
+            },
+
+            toggleNotebook() {
+                const area = document.querySelector('.notebook-content');
+                const arrow = document.getElementById('notebook-arrow');
+                area.classList.toggle('open');
+                arrow.textContent = area.classList.contains('open') ? '▲' : '▼';
+            },
+
+            saveNote(text) {
+                localStorage.setItem(`note_case_${this.currentLevelId}`, text);
+            }
+        };
+
+        // --- Confetti ---
+        let confettiCtx = null, confettiRunning = false, particles = [];
+        const canvas = document.getElementById('confetti-canvas');
+        
+        function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resizeCanvas);
+
+        function startConfetti() {
+            confettiCtx = canvas.getContext('2d');
+            resizeCanvas();
+            confettiRunning = true;
+            particles = Array.from({length: 100}, () => ({
+                x: Math.random() * canvas.width, y: Math.random() * canvas.height - canvas.height,
+                color: ['#00f3ff', '#ff00ff', '#00ff66'][Math.floor(Math.random()*3)],
+                size: Math.random() * 8 + 2, speed: Math.random() * 5 + 2, angle: Math.random() * 6
+            }));
+            requestAnimationFrame(renderConfetti);
+        }
+
+        function stopConfetti() { confettiRunning = false; if(confettiCtx) confettiCtx.clearRect(0,0, canvas.width, canvas.height); }
+
+        function renderConfetti() {
+            if(!confettiRunning) return;
+            confettiCtx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                confettiCtx.fillStyle = p.color;
+                confettiCtx.beginPath(); confettiCtx.rect(p.x, p.y, p.size, p.size); confettiCtx.fill();
+                p.y += p.speed;
+                if(p.y > canvas.height) p.y = -10;
+            });
+            requestAnimationFrame(renderConfetti);
+        }
+
+        game.init();
+
+    </script>
+</body>
+</html>
